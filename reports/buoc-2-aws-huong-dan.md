@@ -697,50 +697,53 @@ Nguyên nhân phổ biến:
 Khi hoàn thành lab, hãy xóa các tài nguyên AWS:
 
 ```bash
-# Xóa EC2 instance
+**Trước khi chạy:** dùng credentials **admin** (`aws sts get-caller-identity` phải ra user admin, không phải `income-lab-user`). Mở terminal mới thì các biến `export` bị mất, nên đặt lại ngay đầu (nếu để trống, lệnh sẽ báo `argument --region: expected one argument`). Việc dọn dẹp **không thể khôi phục**: API ngừng hoạt động, dữ liệu DVC và model trên S3 bị xóa. Hãy làm sau khi đã chụp đủ ảnh và hoàn thành mọi việc cần hạ tầng (kể cả quality gate/bonus nếu có làm).
+
+```bash
+export AWS_REGION="us-east-1"
+export BUCKET_NAME="income-lab-<AWS_ACCOUNT_ID>"
+# Nếu mất $INSTANCE_ID, lấy lại:
+export INSTANCE_ID=$(aws ec2 describe-instances --region $AWS_REGION \
+  --filters Name=tag:Name,Values=income-api Name=instance-state-name,Values=running,stopped \
+  --query 'Reservations[0].Instances[0].InstanceId' --output text)
+
+# 1. Xóa EC2 instance và chờ terminate hoàn toàn
 aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region $AWS_REGION
+aws ec2 wait instance-terminated --instance-ids $INSTANCE_ID --region $AWS_REGION
 
-# Xóa security group (chờ instance terminate hoàn toàn)
-aws ec2 delete-security-group --group-name $VM_SECURITY_GROUP --region $AWS_REGION
+# 2. Xóa security group và key pair (security group chỉ xóa được sau khi instance đã terminate)
+aws ec2 delete-security-group --group-name income-api-sg --region $AWS_REGION
+aws ec2 delete-key-pair --key-name income-lab-key --region $AWS_REGION
 
-# Xóa key pair
-aws ec2 delete-key-pair --key-name $VM_KEY_NAME --region $AWS_REGION
-
-# Xóa S3 bucket (phải trống trước)
-aws s3 rm s3://$BUCKET_NAME --recursive
-aws s3 rb s3://$BUCKET_NAME
-
-# Xóa IAM user
-aws iam delete-user-policy --user-name income-lab-user --policy-name s3-income-lab-access
-
-# Xóa tất cả access key của user
-for k in $(aws iam list-access-keys --user-name income-lab-user --query 'AccessKeyMetadata[].AccessKeyId' --output text); do aws iam delete-access-key --user-name income-lab-user --access-key-id $k; done
-
-# Xóa user
-aws iam delete-user --user-name income-lab-user
-
-# Nếu dùng instance profile (Bước 7.1), cũng xóa role và instance profile:
-# (Phải xóa instance profile khỏi EC2 trước, sau khi terminate instance)
-sleep 30  # Chờ instance terminate hoàn toàn
-
-aws ec2 disassociate-iam-instance-profile \
-  --instance-id $INSTANCE_ID \
-  --region $AWS_REGION || true
-
+# 3. Xóa IAM role và instance profile của EC2 (Bước 7.1).
+#    Không cần disassociate: association tự biến mất khi instance terminate.
 aws iam remove-role-from-instance-profile \
   --instance-profile-name income-api-profile \
   --role-name income-api-role
+aws iam delete-instance-profile --instance-profile-name income-api-profile
+# Lưu ý: Tên policy thực tế có thể khác (ví dụ: read-artifacts thay vì s3-artifacts-read)
+# Kiểm tra tên bằng: aws iam list-role-policies --role-name income-api-role
+aws iam delete-role-policy --role-name income-api-role --policy-name s3-artifacts-read
+aws iam delete-role --role-name income-api-role
 
-aws iam delete-instance-profile \
-  --instance-profile-name income-api-profile
+# 4. Xóa S3 bucket (phải trống trước; KHÔNG khôi phục được)
+aws s3 rm s3://$BUCKET_NAME --recursive
+aws s3 rb s3://$BUCKET_NAME
 
-aws iam delete-role-policy \
-  --role-name income-api-role \
-  --policy-name s3-artifacts-read
+# 5. Xóa IAM user của lab: access key, inline policy, rồi user
+for k in $(aws iam list-access-keys --user-name income-lab-user --query 'AccessKeyMetadata[].AccessKeyId' --output text); do
+  aws iam delete-access-key --user-name income-lab-user --access-key-id $k
+done
+aws iam delete-user-policy --user-name income-lab-user --policy-name s3-income-lab-access
+aws iam delete-user --user-name income-lab-user
 
-aws iam delete-role \
-  --role-name income-api-role
+# 6. (Tùy chọn) Dọn máy local và GitHub Secrets
+rm -f ~/.ssh/income-lab-key.pem ~/.ssh/income_deploy ~/.ssh/income_deploy.pub
+# gh secret delete STORAGE_CREDENTIALS; gh secret delete ARTIFACT_BUCKET; gh secret delete SERVER_HOST
+# gh secret delete SERVER_USER; gh secret delete SERVER_SSH_KEY
 ```
+
+Sau khi dọn xong, kiểm tra không còn tài nguyên chạy: `aws ec2 describe-instances --region $AWS_REGION --query 'Reservations[].Instances[].[InstanceId,State.Name]'` và `aws s3 ls`.
 
 ---
 

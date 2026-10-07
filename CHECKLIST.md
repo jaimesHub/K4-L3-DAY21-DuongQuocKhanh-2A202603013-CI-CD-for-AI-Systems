@@ -99,11 +99,27 @@
 
 **Rubric: 0 điểm (bắt buộc)**
 
-- [x] **Điền báo cáo vào `nop-bai/bao-cao.md`** | 4 mục bắt buộc điền xong, xoá toàn bộ comment | Số từ cuối: 611 ✓ | 0 điểm
+- [x] **Điền báo cáo vào `nop-bai/bao-cao.md`** | 4 mục bắt buộc điền xong, xoá toàn bộ comment | Số từ cuối: 580 ✓ | 0 điểm
 - [x] **Nộp 5 ảnh chụp màn hình** | 01, 02, 03, 04, 05a, 05b (ảnh 05 tách thành 2 file) | < 1 MB mỗi ảnh ✓ | 0 điểm
 - [x] **Commit tất cả lên GitHub** | Chạy: `git add nop-bai/ && git commit && git push` | Thư mục `nop-bai/` hiển thị đầy đủ trên GitHub | 0 điểm ✓ commit ab301ef đã push lên origin/main
 - [x] **Repo GitHub ở chế độ public** | Kiểm tra: Settings > Visibility > Public | Có thể truy cập repo mà không cần login | 0 điểm ✓ gh repo view: PUBLIC
 - [ ] **Dán URL repo vào bài nộp trên vlearn.dev** | URL: `https://github.com/USERNAME/REPO_NAME` | Được xác nhận nhân viên chấm | 0 điểm
+
+### Dọn Dẹp AWS
+
+Sau khi hoàn thành lab và chụp đủ ảnh, xóa các tài nguyên AWS để tránh phát sinh chi phí. Tham chiếu: reports/buoc-2-aws-huong-dan.md, mục Dọn Dẹp.
+
+- [x] Terminate EC2 instance (`income-api`) | ✓ Instance i-097b6a709a25cfd47 terminated (8/10/2026)
+- [x] Xóa security group (`income-api-sg`) | ✓ Deleted (8/10/2026)
+- [x] Xóa EC2 key pair (`income-lab-key.pem`) | ✓ Deleted (8/10/2026)
+- [ ] Xóa IAM role và instance profile (`income-api-role`, `income-api-profile`) | Instance profile deleted, role còn lại: chạy `aws iam delete-role-policy --role-name income-api-role --policy-name read-artifacts` rồi `aws iam delete-role --role-name income-api-role`
+- [x] Xóa S3 bucket (`income-lab-*`) - **KHÔNG THỂ KHÔI PHỤC** | ✓ Deleted (8/10/2026)
+- [x] Xóa IAM user (`income-lab-user`) - access keys, inline policies | ✓ Deleted (8/10/2026)
+- [x] Xóa local SSH keys (`~/.ssh/income-lab-key.pem`, `~/.ssh/income_deploy*`) | ✓ Deleted (8/10/2026)
+
+**Lưu ý:** Cần đăng nhập bằng credentials **admin** để thực hiện dọn dẹp. Việc xóa không thể đảo lại.
+
+**Ghi chú (8/10/2026):** Hầu hết tài nguyên đã dọn dẹp thành công. Policy name thực tế là `read-artifacts`, không phải `s3-artifacts-read` như trong hướng dẫn — nếu đặt tên policy khác lúc tạo, kiểm tra bằng `aws iam list-role-policies --role-name income-api-role`.
 
 ---
 
@@ -178,13 +194,13 @@
 3. **Khó khăn**: 3 vấn đề thực tế (SQLAlchemy ImportError, 403 HeadObject, Release fail scikit-learn) + cách giải
 4. **So sánh Bước 2 vs 3**: Bảng F1/accuracy, nhận xét chênh nhỏ (chỉ +0.0115 F1, 500 mẫu holdout)
 
-**Giới hạn:** ≤ 1 trang A4 (~ 450-600 từ). Hiện tại: 611 từ
+**Giới hạn:** ≤ 1 trang A4 (~ 450-600 từ). Hiện tại: 580 từ (tính cả ký tự markdown, nên số từ hiển thị thực tế thấp hơn)
 
 ---
 
 ## GHI CHÚ
 
-- ✅ Bao-cao.md: xoá toàn bộ comment hướng dẫn, 611 từ (nằm trong 550-600)
+- ✅ Bao-cao.md: xoá toàn bộ comment hướng dẫn, 580 từ (tính cả markdown, thực tế hiển thị thấp hơn)
 - ✅ CHECKLIST: cập nhật checkpoint và ghi chú phù hợp thực tế
 - ✅ Không commit key/pem/credentials AWS (đã gỡ s3-policy.json khỏi git)
 - ✅ Ảnh: 01, 02, 03, 04, 05a, 05b (05 tách thành 2 file) < 1 MB
