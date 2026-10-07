@@ -43,10 +43,10 @@
 
 ### DVC và Cloud Storage (12 điểm)
 
-- [ ] **Tạo bucket trên cloud** | Chạy: `aws s3 mb s3://$BUCKET` (AWS), hoặc `gsutil mb` (GCP), hoặc `az storage container create` (Azure) | Bucket hiển thị trên Cloud Console | 0 điểm
-- [ ] **Tạo credentials** | Chạy: `aws iam create-user` + `aws iam create-access-key` (AWS), hoặc tương đương GCP/Azure | File credentials (access key hoặc JSON) được lưu an toàn | 0 điểm
-- [ ] **Cấu hình DVC** | Chạy: `dvc init`, `dvc remote add -d labstore s3://$BUCKET/dvc`, `dvc remote modify labstore region`, `dvc add data/*.csv` | File `.dvc/config` có remote URL đúng | 0 điểm
-- [ ] **Push dữ liệu lên cloud** | Chạy: `dvc push` | S3/Cloud Storage Console hiển thị 3 file CSV hoặc dung lượng tương ứng trong `dvc/` | **12 điểm**
+- [x] **Tạo bucket trên cloud** | Chạy: `aws s3 mb s3://$BUCKET` (AWS), hoặc `gsutil mb` (GCP), hoặc `az storage container create` (Azure) | Bucket hiển thị trên Cloud Console | ✓ S3 bucket income-lab-667323977010 tồn tại (ảnh 05)
+- [x] **Tạo credentials** | Chạy: `aws iam create-user` + `aws iam create-access-key` (AWS), hoặc tương đương GCP/Azure | File credentials (access key hoặc JSON) được lưu an toàn | 0 điểm (dùng GitHub Secrets thay vì lưu file)
+- [x] **Cấu hình DVC** | Chạy: `dvc init`, `dvc remote add -d labstore s3://$BUCKET/dvc`, `dvc remote modify labstore region`, `dvc add data/*.csv` | File `.dvc/config` có remote URL đúng | ✓ DVC remote s3://income-lab-667323977010/dvc
+- [x] **Push dữ liệu lên cloud** | Chạy: `dvc push` | S3/Cloud Storage Console hiển thị 3 file CSV hoặc dung lượng tương ứng trong `dvc/` | **12 điểm** ✓ dvc/ folder thấy rõ trên S3 (ảnh 05)
 
 ### Unit Tests (không tính điểm riêng, nhưng bắt buộc)
 
@@ -54,26 +54,29 @@
 
 ### CI/CD Pipeline (16 điểm)
 
-- [x] **Viết `src/serve.py` hoàn chỉnh** | File tồn tại, có `download_model()`, endpoints `/healthz` và `/score` | ✓ Hoàn thành với boto3 S3 download, /healthz trả {"status":"ok"}, /score kiểm tra 10 features + dự đoán. Ghi chú: chưa chạy trên VM
-- [ ] **Tạo VM trên cloud** | Chạy: `aws ec2 run-instances ...` | VM hoạt động, có public IP | 0 điểm
-- [ ] **Cấu hình systemd service trên VM** | SSH vào VM, tạo `/etc/systemd/system/income-api.service` | Service đã enable, chưa start (chờ model có) | 0 điểm
-- [x] **Tạo `.github/workflows/cicd.yml`** | File tồn tại ở `.github/workflows/cicd.yml` | 4 jobs: Unit Test → Train → Quality Gate → Release, triggers on data/**.dvc, src/**.py, params.yaml | ✓ 4 jobs hoàn chỉnh, AWS-specific (boto3 S3 auth, dvc pull, quality gate, SSH release). Ghi chú: chưa chạy pipeline
+- [x] **Viết `src/serve.py` hoàn chỉnh** | File tồn tại, có `download_model()`, endpoints `/healthz` và `/score` | ✓ Hoàn thành với boto3 S3 download, /healthz trả {"status":"ok"}, /score kiểm tra 10 features + dự đoán, đã chạy trên VM
+- [x] **Tạo VM trên cloud** | Chạy: `aws ec2 run-instances ...` | VM hoạt động, có public IP | ✓ EC2 income-api đang chạy, IP 54.87.78.192 (ảnh 04)
+- [x] **Cấu hình systemd service trên VM** | SSH vào VM, tạo `/etc/systemd/system/income-api.service` | Service đã enable và đang chạy | ✓ Service income-api hoạt động (ảnh 04)
+- [x] **Tạo `.github/workflows/cicd.yml`** | File tồn tại ở `.github/workflows/cicd.yml` | 4 jobs: Unit Test → Train → Quality Gate → Release, triggers on data/**.dvc, src/**.py, params.yaml | ✓ 4 jobs hoàn chỉnh, AWS-specific (boto3 S3 auth, dvc pull, quality gate, SSH release)
 
 ### Quality Gate (4 điểm)
 
-- [ ] **Quality gate chặn khi f1_score < 0.65** | Kiểm tra: Bước Quality Gate trong cicd.yml so sánh `f1 >= 0.65` | Nếu f1 < 0.65, Release job bị skip | **4 điểm**
+- [x] **Quality gate chặn khi f1_score < 0.65** | Kiểm tra: Bước Quality Gate trong cicd.yml so sánh `f1 >= 0.65` | Nếu f1 < 0.65, Release job bị skip | **4 điểm** ✓ cicd.yml có so sánh f1 >= 0.65
+- [ ] **(Chưa thử thực tế)** Demonstrate Release bị chặn khi f1 < 0.65 | Ghi chú: chưa có bằng chứng run bị chặn (chỉ có run thành công)
 
 ### Triển Khai (Serving) (12 điểm)
 
-- [ ] **Push code lần đầu kích hoạt pipeline** | Chạy: `git add . && git commit && git push origin main` | GitHub Actions tab: 4 jobs chạy tới Green | 0 điểm
-- [ ] **Start service trên VM** | Chạy: `gcloud compute ssh ... --command "sudo systemctl start income-api"` | Service đang chạy | 0 điểm
-- [ ] **API `/healthz` hoạt động** | Chạy: `curl http://VM_IP:8080/healthz` | Kết quả: `{"status": "ok"}` | 0 điểm
-- [ ] **API `/score` trả về dự đoán đúng** | Chạy: `curl -X POST http://VM_IP:8080/score -H "Content-Type: application/json" -d '{"features": [...]}` | Kết quả: `{"prediction": 0 or 1, "label": "thu_nhap_thap" or "thu_nhap_cao"}` | **12 điểm**
+- [x] **Push code lần đầu kích hoạt pipeline** | Chạy: `git add . && git commit && git push origin main` | GitHub Actions tab: 4 jobs chạy tới Green | ✓ Run 37657696450 thành công cả 4 jobs (ảnh 02)
+- [x] **Start service trên VM** | Chạy: `aws ec2-instance-connect send-ssh-public-key ...` hoặc SSH vào VM, `sudo systemctl start income-api` | Service đang chạy | ✓ Service income-api chạy trên EC2 54.87.78.192
+- [x] **API `/healthz` hoạt động** | Chạy: `curl http://VM_IP:8080/healthz` | Kết quả: `{"status": "ok"}` | ✓ curl 54.87.78.192:8080/healthz → {"status":"ok"} (ảnh 04)
+- [x] **API `/score` trả về dự đoán đúng** | Chạy: `curl -X POST http://VM_IP:8080/score -H "Content-Type: application/json" -d '{"features": [...]}` | Kết quả: `{"prediction": 0 or 1, "label": "thu_nhap_thap" or "thu_nhap_cao"}` | **12 điểm** ✓ 2 POST requests → [60,2,...,45]→thu_nhap_thap, [28,2,...,45]→thu_nhap_cao (ảnh 04)
 
 **Checkpoint:** 
-- 4 jobs tất cả màu xanh. Chụp → `02-actions-buoc-2.png`
-- Lệnh curl thành công. Chụp → `04-curl-api.png`
-- Cloud Storage hiển thị `dvc/` và `artifacts/current/model.joblib`. Chụp → `05-cloud-storage.png`
+- 4 jobs tất cả màu xanh. Chụp → `02-actions-buoc-2.png` ✓ PASS
+- Lệnh curl thành công. Chụp → `04-curl-api.png` ✓ PASS
+- Cloud Storage hiển thị `dvc/` và `artifacts/current/model.joblib`. Chụp → `05-cloud-storage.png` ⚠️ Chưa fix tên file (hiện có 05-cloud-storage_1.png và 05-cloud-storage_2.png)
+
+**Ghi chú (7 tháng 10, 2026):** Các mục chính Bước 2 đã hoàn thành. Công việc còn tồn: (1) Hủy run kẹt 37651842288, (2) Gỡ s3-policy.json(.bak) khỏi repo, (3) Fix tên ảnh 05 (gộp thành một file hoặc đổi tên theo yêu cầu README), (4) Chưa commit thay đổi.
 
 ---
 

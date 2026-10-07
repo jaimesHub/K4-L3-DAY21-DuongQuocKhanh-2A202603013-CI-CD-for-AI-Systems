@@ -108,6 +108,8 @@ cat /tmp/access-key.json
 
 Lưu `AccessKeyId` và `SecretAccessKey` vào file an toàn (ví dụ: `~/.aws/credentials`) hoặc sử dụng trực tiếp trong GitHub Secrets.
 
+**Lưu ý quan trọng:** Cặp key này sẽ được sử dụng lại ở Bước 9.1 để set GitHub Secret. Mỗi IAM user tối đa có 2 access key, nên không nên tạo key lần hai nếu vẫn còn key này.
+
 ---
 
 ## Bước 3: Cấu Hình DVC Với S3
@@ -244,8 +246,17 @@ ssh -i ~/.ssh/$VM_KEY_NAME.pem ubuntu@$PUBLIC_IP
 sudo apt-get update
 sudo apt-get install -y python3-pip python3-venv
 
-# Cài các thư viện cần thiết
-pip3 install fastapi uvicorn scikit-learn joblib boto3
+# Cài các thư viện cần thiết với phiên bản ghim (phải khớp với requirements.txt)
+pip3 install --user "scikit-learn==1.4.2" "numpy<2" "joblib==1.4.2" "fastapi==0.111.0" "uvicorn==0.29.0" "boto3==1.34.49"
+
+# ⚠️ LƯU Ý VỀ PHIÊN BẢN:
+# VM phải cài cùng phiên bản như phiên bản train trong CI (requirements.txt).
+# Nếu VM cài scikit-learn mới hơn (ví dụ 1.5+), joblib.load() sẽ báo lỗi:
+#   AttributeError: '__pyx_unpickle_CyHalfBinomialLoss'
+# 
+# Triệu chứng: /score endpoint 500 error, log có lỗi unpickle.
+# Cách khắc phục: Chạy lại lệnh pip3 trên để cài đúng phiên bản, sau đó:
+#   sudo systemctl restart income-api
 
 # Tạo thư mục cho model và code
 mkdir -p ~/models ~/src
@@ -322,6 +333,112 @@ exit
 
 ---
 
+## Bước 7.1: Cấu Hình IAM Instance Profile Cho VM (Khuyến Nghị Bảo Mật)
+
+Thay vì dùng access key trong service file, sử dụng IAM instance profile (role được gắn trực tiếp vào EC2):
+
+### 7.1.1: Tạo IAM Role Và Policy
+
+Trên máy cá nhân (cần credentials admin):
+
+```bash
+# Tạo trust policy cho EC2
+cat > /tmp/ec2-trust-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+# Tạo IAM role
+aws iam create-role \
+  --role-name income-api-role \
+  --assume-role-policy-document file:///tmp/ec2-trust-policy.json
+
+# Tạo inline policy cho S3 artifacts (chỉ-đọc)
+cat > /tmp/s3-artifacts-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject"
+      ],
+      "Resource": "arn:aws:s3:::BUCKET_NAME/artifacts/*"
+    }
+  ]
+}
+EOF
+
+# Thay BUCKET_NAME
+sed -i.bak "s/BUCKET_NAME/$BUCKET_NAME/g" /tmp/s3-artifacts-policy.json
+
+# Gắn policy vào role
+aws iam put-role-policy \
+  --role-name income-api-role \
+  --policy-name s3-artifacts-read \
+  --policy-document file:///tmp/s3-artifacts-policy.json
+
+# Tạo instance profile
+aws iam create-instance-profile --instance-profile-name income-api-profile
+
+# Gắn role vào instance profile
+aws iam add-role-to-instance-profile \
+  --instance-profile-name income-api-profile \
+  --role-name income-api-role
+
+# Gắn instance profile vào EC2 instance (nếu instance đã chạy)
+aws ec2 associate-iam-instance-profile \
+  --iam-instance-profile Name=income-api-profile \
+  --instance-id $INSTANCE_ID \
+  --region $AWS_REGION
+
+# Xóa file tạm (KHÔNG để trong repo)
+rm -f /tmp/ec2-trust-policy.json /tmp/s3-artifacts-policy.json /tmp/s3-artifacts-policy.json.bak
+```
+
+### 7.1.2: Cập Nhật Systemd Service
+
+Bỏ comment dòng `IAM role instance profile` trong service file (Bước 7, dòng 309) và comment lại các dòng `AWS_ACCESS_KEY_ID` và `AWS_SECRET_ACCESS_KEY`:
+
+```bash
+ssh -i ~/.ssh/$VM_KEY_NAME.pem ubuntu@$PUBLIC_IP << 'EOF'
+sudo tee /etc/systemd/system/income-api.service > /dev/null <<SERVICEEOF
+[Unit]
+Description=Income Model Inference Server
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu
+Environment="ARTIFACT_BUCKET=$BUCKET_NAME"
+Environment="AWS_DEFAULT_REGION=$AWS_REGION"
+# Để sử dụng IAM role instance profile (khuyến nghị)
+# ExecStart sẽ tự động lấy credentials từ EC2 metadata
+ExecStart=/usr/bin/python3 /home/ubuntu/src/serve.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICEEOF
+
+sudo systemctl daemon-reload
+EOF
+```
+
+---
+
 ## Bước 8: Tạo SSH Key Cho GitHub Actions
 
 Tạo key pair riêng cho GitHub Actions:
@@ -364,19 +481,40 @@ Nội dung JSON:
 }
 ```
 
-Cách an toàn để set secret:
+**Cách A (Khuyến nghị nếu còn file key từ Bước 2.3):**
+
+Nếu file `/tmp/access-key.json` từ Bước 2.3 vẫn còn, sử dụng đúng cặp key này:
 
 ```bash
-cat > /tmp/creds.json <<EOF
-{
-  "aws_access_key_id": "$(aws iam create-access-key --user-name income-lab-user --query 'AccessKey.AccessKeyId' --output text)",
-  "aws_secret_access_key": "$(cat /tmp/access-key.json | python -c "import json,sys; print(json.load(sys.stdin)['AccessKey']['SecretAccessKey'])")"
-}
-EOF
+python3 -c "import json; k=json.load(open('/tmp/access-key.json'))['AccessKey']; print(json.dumps({'aws_access_key_id':k['AccessKeyId'],'aws_secret_access_key':k['SecretAccessKey']}))" | gh secret set STORAGE_CREDENTIALS
 
-gh secret set STORAGE_CREDENTIALS < /tmp/creds.json
-rm /tmp/creds.json  # Xóa file sau khi dùng
+# Sau khi set xong, xóa file (chỉ xóa khi đã confirm secret được set và cấu hình cục bộ xong)
+rm -f /tmp/access-key.json
 ```
+
+**Cách B (Nếu mất file key hoặc cần key mới):**
+
+Trước hết kiểm tra xem đã có 2 key:
+
+```bash
+aws iam list-access-keys --user-name income-lab-user
+```
+
+Nếu đã có 2 key, xóa key không dùng:
+
+```bash
+aws iam delete-access-key --user-name income-lab-user --access-key-id AKIAXXXXXXXXXXXXX
+```
+
+Sau đó tạo key mới và set trực tiếp (trong một lệnh, không lưu lên disk):
+
+```bash
+aws iam create-access-key --user-name income-lab-user --output json | python3 -c "import json,sys; k=json.load(sys.stdin)['AccessKey']; print(json.dumps({'aws_access_key_id':k['AccessKeyId'],'aws_secret_access_key':k['SecretAccessKey']}))" | gh secret set STORAGE_CREDENTIALS
+```
+
+**Lưu ý:** 
+- Nếu xóa key cục bộ (~/.aws/credentials), phải cấu hình lại: `aws configure --profile income-lab`
+- Đừng tạo key thứ 2 nếu vẫn có key từ Bước 2.3; mỗi user tối đa 2 key
 
 ### 9.2: ARTIFACT_BUCKET
 
@@ -512,6 +650,26 @@ Kiểm tra:
 cat .dvc/config
 ```
 
+### Lỗi thường gặp
+
+**Pipeline báo lỗi `dvc pull`: 403 HeadObject**
+
+Nguyên nhân phổ biến: `aws_access_key_id` và `aws_secret_access_key` không cùng một cặp key (AccessKeyId từ lần tạo mới, SecretAccessKey từ key cũ).
+
+Kiểm tra số lượng key hiện tại:
+
+```bash
+aws iam list-access-keys --user-name income-lab-user
+```
+
+Nếu có 2 key và chắc chắn key nào là key cũ, xóa key không dùng:
+
+```bash
+aws iam delete-access-key --user-name income-lab-user --access-key-id AKIAXXXXXXXXXXXXX
+```
+
+Sau đó sử dụng **Cách B** từ Bước 9.1 để tạo key mới và set secret lại.
+
 ### Service không khởi động trên VM
 
 Xem log:
@@ -554,8 +712,34 @@ aws s3 rb s3://$BUCKET_NAME
 
 # Xóa IAM user
 aws iam delete-user-policy --user-name income-lab-user --policy-name s3-income-lab-access
-aws iam delete-access-key --user-name income-lab-user --access-key-id AKIAIOSFODNN7EXAMPLE
+
+# Xóa tất cả access key của user
+for k in $(aws iam list-access-keys --user-name income-lab-user --query 'AccessKeyMetadata[].AccessKeyId' --output text); do aws iam delete-access-key --user-name income-lab-user --access-key-id $k; done
+
+# Xóa user
 aws iam delete-user --user-name income-lab-user
+
+# Nếu dùng instance profile (Bước 7.1), cũng xóa role và instance profile:
+# (Phải xóa instance profile khỏi EC2 trước, sau khi terminate instance)
+sleep 30  # Chờ instance terminate hoàn toàn
+
+aws ec2 disassociate-iam-instance-profile \
+  --instance-id $INSTANCE_ID \
+  --region $AWS_REGION || true
+
+aws iam remove-role-from-instance-profile \
+  --instance-profile-name income-api-profile \
+  --role-name income-api-role
+
+aws iam delete-instance-profile \
+  --instance-profile-name income-api-profile
+
+aws iam delete-role-policy \
+  --role-name income-api-role \
+  --policy-name s3-artifacts-read
+
+aws iam delete-role \
+  --role-name income-api-role
 ```
 
 ---
@@ -568,10 +752,23 @@ aws iam delete-user --user-name income-lab-user
    ```
    Đảm bảo không có `.aws/`, `sa-key.json`, hoặc file chứa credentials
 
-2. **Không commit credentials:**
+2. **Không commit credentials và file policy tạm:**
    ```bash
    # Kiểm tra .gitignore
    cat .gitignore
+   ```
+   
+   **Thêm vào .gitignore nếu chưa có:**
+   ```
+   s3-policy.json
+   s3-policy.json.bak
+   .aws/
+   ```
+   
+   **Xóa file tạm:**
+   ```bash
+   rm -f s3-policy.json s3-policy.json.bak
+   git rm --cached s3-policy.json s3-policy.json.bak 2>/dev/null || true
    ```
 
 3. **Sử dụng secrets thay vì hardcode:**

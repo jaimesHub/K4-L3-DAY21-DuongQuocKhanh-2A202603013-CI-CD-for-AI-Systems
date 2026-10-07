@@ -11,13 +11,15 @@ HƯỚNG DẪN - đọc rồi XÓA TOÀN BỘ các khối chú thích này sau k
     và xem trước bản in bằng cách mở file trên GitHub rồi Ctrl+P / Cmd+P.
 -->
 
-| | |
-|---|---|
-| Họ và tên | ___ |
-| MSSV | ___ |
-| Lớp / Khóa | K4 |
-| Repo GitHub | https://github.com/___/___ |
-| Ngày nộp | ___ |
+
+|             |                                                                                                                              |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Họ và tên   | Dương Quốc Khánh                                                                                                             |
+| MSSV        | 2A202603013                                                                                                                  |
+| Lớp / Khóa  | K4                                                                                                                           |
+| Repo GitHub | [https://github.com/jaimesHub/K4-L3-DAY21-DuongQuocKhanh-2A202603013-CI-CD-for-AI-Systems](https://github.com/jaimesHub/K4-L3-DAY21-DuongQuocKhanh-2A202603013-CI-CD-for-AI-Systems) |
+| Ngày nộp    |                                                                                                  **7 tháng 10, 2026**        |
+
 
 ---
 
@@ -25,12 +27,14 @@ HƯỚNG DẪN - đọc rồi XÓA TOÀN BỘ các khối chú thích này sau k
 
 <!-- Khoảng 120 - 150 từ. Điền kết quả thật từ MLflow UI ở Bước 1, tối thiểu 3 lần chạy. -->
 
-| Lần chạy | n_estimators | learning_rate | max_depth | f1_score | accuracy |
-|---|---|---|---|---|---|
-| 1 | 100 | 0.10 | 3 | 0.7109 | 0.8780 |
-| 2 | 200 | 0.10 | 5 | 0.7149 | 0.8740 |
-| 3 | 150 | 0.15 | 4 | 0.7182 | 0.8760 |
-| 4 | 50 | 0.05 | 2 | 0.6051 | 0.8460 |
+
+| Lần chạy | n\_estimators | learning\_rate | max\_depth | f1\_score | accuracy |
+| -------- | ------------- | -------------- | ---------- | --------- | -------- |
+| 1        | 100           | 0.10           | 3          | 0.7109    | 0.8780   |
+| 2        | 200           | 0.10           | 5          | 0.7149    | 0.8740   |
+| 3        | 150           | 0.15           | 4          | 0.7182    | 0.8760   |
+| 4        | 50            | 0.05           | 2          | 0.6051    | 0.8460   |
+
 
 **Bộ siêu tham số đã chọn:** `n_estimators=150`, `learning_rate=0.15`, `max_depth=4`.
 
@@ -50,7 +54,7 @@ Trả lời trong phần Lý do:
 
 <!-- Khoảng 120 - 150 từ. -->
 
-Tập dữ liệu Adult có phân bố lớp mất cân bằng: chỉ 24,8% mẫu có thu nhập > 50K, còn 75,2% có thu nhập ≤ 50K. Với phân bố như vậy, một mô hình đơn giản "luôn trả lời thu nhập thấp" sẽ đạt accuracy = 0,752, trông rất cao nhưng thực chất nó không bao giờ phát hiện được lớp dương (F1 = 0). Accuracy bị lớp đa số chi phối, khiến nó không phản ánh thực chất hiệu năng của mô hình trên bài toán này. Ngược lại, F1 Score là trung bình điều hòa của Precision và Recall của lớp dương, bắt buộc mô hình phải vừa bắt được lớp thiểu số (recall cao) vừa dự đoán chính xác (precision cao). Do đó, F1 đảm bảo mô hình thực sự học được bài toán. Không dùng average="weighted" hay average="macro" là vì hai phương pháp này sẽ làm loãng hoặc che đi hiệu năng thực của lớp dương bằng cách cộng hưởng tính toán với lớp đa số, trái với mục tiêu đặt ngưỡng trên lớp thiểu số.
+Tập dữ liệu Adult có phân bố lớp mất cân bằng: chỉ 24,8% mẫu có thu nhập &gt; 50K, còn 75,2% có thu nhập ≤ 50K. Với phân bố như vậy, một mô hình đơn giản "luôn trả lời thu nhập thấp" sẽ đạt accuracy = 0,752, trông rất cao nhưng thực chất nó không bao giờ phát hiện được lớp dương (F1 = 0). Accuracy bị lớp đa số chi phối, khiến nó không phản ánh thực chất hiệu năng của mô hình trên bài toán này. Ngược lại, F1 Score là trung bình điều hòa của Precision và Recall của lớp dương, bắt buộc mô hình phải vừa bắt được lớp thiểu số (recall cao) vừa dự đoán chính xác (precision cao). Do đó, F1 đảm bảo mô hình thực sự học được bài toán. Không dùng average="weighted" hay average="macro" là vì hai phương pháp này sẽ làm loãng hoặc che đi hiệu năng thực của lớp dương bằng cách cộng hưởng tính toán với lớp đa số, trái với mục tiêu đặt ngưỡng trên lớp thiểu số.
 
 <!--
 Cần nêu được:
@@ -67,11 +71,13 @@ Cần nêu được:
 
 <!-- Nêu 2 - 3 khó khăn thật, mỗi ô một câu ngắn. -->
 
-| Khó khăn | Nguyên nhân | Cách giải quyết |
-|---|---|---|
+
+| Khó khăn                                                  | Nguyên nhân                                                                                                              | Cách giải quyết                                     |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
 | ImportError: FallbackAsyncAdaptedQueuePool không tìm thấy | MLflow 2.13.0 với backend SQLite cần SQLAlchemy 2.0.x; phiên bản SQLAlchemy cài lúc đầu không tương thích nên import lỗi | Cài sqlalchemy==2.0.23 và ghim vào requirements.txt |
-| ___ | ___ | ___ |
-| ___ | ___ | ___ |
+| Job Train fail ở bước `dvc pull` với lỗi 403 Forbidden (HeadObject) | Secret STORAGE_CREDENTIALS chứa AccessKeyId của key mới nhưng SecretAccessKey của key cũ nên cặp key không khớp | Xoá key lệch, tạo lại access key cho IAM user và đẩy thẳng cặp key đúng vào GitHub Secret bằng một lệnh pipe |
+| Job Release fail vì health check /healthz không lên (service crash loop, log: AttributeError '__pyx_unpickle_CyHalfBinomialLoss' khi joblib.load) | VM cài scikit-learn bản mới hơn 1.4.2 dùng khi train trên CI nên không đọc được file model | Cài lại trên VM đúng phiên bản ghim như requirements.txt (scikit-learn==1.4.2, numpy<2, joblib==1.4.2) rồi restart service |
+
 
 ---
 
@@ -79,12 +85,14 @@ Cần nêu được:
 
 <!-- Lấy số liệu từ bảng ở mục 3.6 của tasks/buoc-3.md. -->
 
-| | f1_score | accuracy |
-|---|---|---|
-| Bước 2 (chỉ `train_batch1`) | ___ | ___ |
-| Bước 3 (thêm `train_batch2`) | ___ | ___ |
 
-**Nhận xét:** ___
+|                              | f1\_score | accuracy |
+| ---------------------------- | --------- | -------- |
+| Bước 2 (chỉ `train_batch1`)  | 0.7182    | 0.8760   |
+| Bước 3 (thêm `train_batch2`) | \_\_\_    | \_\_\_   |
+
+
+**Nhận xét:** \_\_\_
 
 <!--
 Một câu trả lời trung thực kiểu "f1 giảm 0,01 vì dữ liệu mới cùng phân phối, không mang
@@ -97,8 +105,8 @@ thêm thông tin mới" được đánh giá cao hơn kết luận sai rằng th
 
 <!-- Xóa cả mục 5 nếu không làm bonus. Mỗi bonus tối đa 1 dòng. -->
 
-- [ ] Bonus 1 - Tracking MLflow từ xa với DagsHub: ___
-- [ ] Bonus 2 - Điều chỉnh ngưỡng quyết định: ___
-- [ ] Bonus 3 - Báo cáo precision / recall tự động: ___
-- [ ] Bonus 4 - Hoàn trả về phiên bản trước: ___
-- [ ] Bonus 5 - Cảnh báo lệch lạc dữ liệu: ___
+- [ ] Bonus 1 - Tracking MLflow từ xa với DagsHub: \_\_\_
+- [ ] Bonus 2 - Điều chỉnh ngưỡng quyết định: \_\_\_
+- [ ] Bonus 3 - Báo cáo precision / recall tự động: \_\_\_
+- [ ] Bonus 4 - Hoàn trả về phiên bản trước: \_\_\_
+- [ ] Bonus 5 - Cảnh báo lệch lạc dữ liệu: \_\_\_
