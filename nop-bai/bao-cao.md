@@ -1,16 +1,5 @@
 # Báo Cáo Lab Day 21 - CI/CD cho AI Systems
 
-<!--
-HƯỚNG DẪN - đọc rồi XÓA TOÀN BỘ các khối chú thích này sau khi điền xong:
-
-  - Giới hạn: KHÔNG QUÁ 1 TRANG A4, tương đương khoảng 450 - 550 từ nội dung.
-  - Chỉ điền vào các chỗ ___ và các ô trong bảng. Không thêm mục mới.
-  - Viết bằng câu hoàn chỉnh, không gạch đầu dòng cụt lủn.
-  - Kiểm tra độ dài sau khi đã xóa hết chú thích:
-        wc -w nop-bai/bao-cao.md
-    và xem trước bản in bằng cách mở file trên GitHub rồi Ctrl+P / Cmd+P.
--->
-
 
 |             |                                                                                                                              |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -18,15 +7,12 @@ HƯỚNG DẪN - đọc rồi XÓA TOÀN BỘ các khối chú thích này sau k
 | MSSV        | 2A202603013                                                                                                                  |
 | Lớp / Khóa  | K4                                                                                                                           |
 | Repo GitHub | [https://github.com/jaimesHub/K4-L3-DAY21-DuongQuocKhanh-2A202603013-CI-CD-for-AI-Systems](https://github.com/jaimesHub/K4-L3-DAY21-DuongQuocKhanh-2A202603013-CI-CD-for-AI-Systems) |
-| Ngày nộp    |                                                                                                  **7 tháng 10, 2026**        |
+| Ngày nộp    |                                                                                                  **8 tháng 10, 2026**        |
 
 
 ---
 
 ## 1. Bộ Siêu Tham Số Đã Chọn và Lý Do
-
-<!-- Khoảng 120 - 150 từ. Điền kết quả thật từ MLflow UI ở Bước 1, tối thiểu 3 lần chạy. -->
-
 
 | Lần chạy | n\_estimators | learning\_rate | max\_depth | f1\_score | accuracy |
 | -------- | ------------- | -------------- | ---------- | --------- | -------- |
@@ -35,78 +21,36 @@ HƯỚNG DẪN - đọc rồi XÓA TOÀN BỘ các khối chú thích này sau k
 | 3        | 150           | 0.15           | 4          | 0.7182    | 0.8760   |
 | 4        | 50            | 0.05           | 2          | 0.6051    | 0.8460   |
 
-
 **Bộ siêu tham số đã chọn:** `n_estimators=150`, `learning_rate=0.15`, `max_depth=4`.
 
-**Lý do:** Bộ siêu tham số n_estimators=150, learning_rate=0.15, max_depth=4 được chọn vì đạt F1 Score cao nhất (0.7182), vượt quá ngưỡng yêu cầu 0.65. Lần chạy có accuracy cao nhất (0.8780 ở 100/0.10/3) không trùng với lần có F1 cao nhất, cho thấy accuracy không phải chỉ số đáng tin cậy khi dữ liệu mất cân bằng lớp. Trên dữ liệu này, tăng n_estimators từ 100 lên 150 kèm tăng learning_rate từ 0.10 lên 0.15 cải thiện F1 từ 0.7109 lên 0.7182. Tuy nhiên, nếu chỉ tăng n_estimators đến 200 mà giữ learning_rate ở 0.10, F1 chỉ đạt 0.7149, thấp hơn bộ đã chọn, cho thấy cân bằng giữa hai tham số này là quan trọng. Bộ 50/0.05/2 có F1 thấp nhất (0.6051) vì mô hình quá nhỏ và tốc độ học quá chậm.
-
-<!--
-Trả lời trong phần Lý do:
-  - Vì sao bộ này tốt hơn các bộ còn lại (dựa trên f1_score, không phải accuracy)?
-  - Lần chạy có accuracy cao nhất có trùng với lần có f1_score cao nhất không?
-    Nếu không, điều đó nói lên điều gì?
-  - Bạn quan sát thấy đánh đổi nào giữa n_estimators và learning_rate?
--->
+**Lý do:** Chọn vì F1 cao nhất (0.7182), vượt ngưỡng 0.65. Accuracy cao nhất (0.8780) không trùng F1 cao nhất, cho thấy accuracy không đáng tin khi mất cân bằng lớp. Từ run 1 sang run 3 (100/0.10→150/0.15) F1 tăng từ 0.7109 lên 0.7182. Run 2 (200/0.10/5) cho F1=0.7149, thấp hơn dù nhiều cây hơn, nhưng run này đồng thời đổi max_depth nên chỉ là gợi ý, chưa kết luận được nguyên nhân. Run 4 (50/0.05/2) F1 thấp nhất (0.6051) vì mô hình quá nhỏ.
 
 ---
 
 ## 2. Vì Sao Ngưỡng Chất Lượng Đặt Trên F1 Chứ Không Phải Accuracy
 
-<!-- Khoảng 120 - 150 từ. -->
-
-Tập dữ liệu Adult có phân bố lớp mất cân bằng: chỉ 24,8% mẫu có thu nhập &gt; 50K, còn 75,2% có thu nhập ≤ 50K. Với phân bố như vậy, một mô hình đơn giản "luôn trả lời thu nhập thấp" sẽ đạt accuracy = 0,752, trông rất cao nhưng thực chất nó không bao giờ phát hiện được lớp dương (F1 = 0). Accuracy bị lớp đa số chi phối, khiến nó không phản ánh thực chất hiệu năng của mô hình trên bài toán này. Ngược lại, F1 Score là trung bình điều hòa của Precision và Recall của lớp dương, bắt buộc mô hình phải vừa bắt được lớp thiểu số (recall cao) vừa dự đoán chính xác (precision cao). Do đó, F1 đảm bảo mô hình thực sự học được bài toán. Không dùng average="weighted" hay average="macro" là vì hai phương pháp này sẽ làm loãng hoặc che đi hiệu năng thực của lớp dương bằng cách cộng hưởng tính toán với lớp đa số, trái với mục tiêu đặt ngưỡng trên lớp thiểu số.
-
-<!--
-Cần nêu được:
-  - Phân bố lớp của tập dữ liệu (tỷ lệ lớp thu nhập > 50K) và hệ quả của nó.
-  - Accuracy của một mô hình luôn trả lời "thu nhập thấp" là bao nhiêu, vì sao con số
-    đó gây hiểu nhầm.
-  - F1 của lớp dương đo điều gì mà accuracy không đo được.
-  - Vì sao KHÔNG dùng average="weighted" hay average="macro" khi gọi f1_score.
--->
+Adult mất cân bằng: 24,8% > 50K, 75,2% ≤ 50K. Mô hình "luôn trả lời thấp" có accuracy=0,752 nhưng F1=0 (không phát hiện lớp dương), chứng tỏ accuracy không phản ánh hiệu năng khi mất cân bằng. F1 là trung bình Precision/Recall lớp dương, bắt buộc vừa bắt được thiểu số vừa chính xác. Không dùng average="weighted"/"macro" vì chúng làm loãng hiệu năng lớp dương.
 
 ---
 
 ## 3. Khó Khăn Gặp Phải và Cách Giải Quyết
 
-<!-- Nêu 2 - 3 khó khăn thật, mỗi ô một câu ngắn. -->
-
-
 | Khó khăn                                                  | Nguyên nhân                                                                                                              | Cách giải quyết                                     |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------- |
 | ImportError: FallbackAsyncAdaptedQueuePool không tìm thấy | MLflow 2.13.0 với backend SQLite cần SQLAlchemy 2.0.x; phiên bản SQLAlchemy cài lúc đầu không tương thích nên import lỗi | Cài sqlalchemy==2.0.23 và ghim vào requirements.txt |
-| Job Train fail ở bước `dvc pull` với lỗi 403 Forbidden (HeadObject) | Secret STORAGE_CREDENTIALS chứa AccessKeyId của key mới nhưng SecretAccessKey của key cũ nên cặp key không khớp | Xoá key lệch, tạo lại access key cho IAM user và đẩy thẳng cặp key đúng vào GitHub Secret bằng một lệnh pipe |
-| Job Release fail vì health check /healthz không lên (service crash loop, log: AttributeError '__pyx_unpickle_CyHalfBinomialLoss' khi joblib.load) | VM cài scikit-learn bản mới hơn 1.4.2 dùng khi train trên CI nên không đọc được file model | Cài lại trên VM đúng phiên bản ghim như requirements.txt (scikit-learn==1.4.2, numpy<2, joblib==1.4.2) rồi restart service |
+| `dvc pull` trên CI lỗi 403 (HeadObject) | Secret chứa AccessKeyId mới nhưng SecretAccessKey của key cũ, cặp key lệch | Tạo lại key và đẩy thẳng cặp đúng vào GitHub Secret |
+| Release fail: `/healthz` không lên, `joblib.load` lỗi unpickle | VM cài scikit-learn mới hơn 1.4.2 dùng khi train | Cài lại đúng phiên bản ghim như requirements.txt rồi restart service |
 
 
 ---
 
 ## 4. So Sánh Bước 2 và Bước 3 (bắt buộc, 2 - 3 câu)
 
-<!-- Lấy số liệu từ bảng ở mục 3.6 của tasks/buoc-3.md. -->
-
-
 |                              | f1\_score | accuracy |
 | ---------------------------- | --------- | -------- |
 | Bước 2 (chỉ `train_batch1`)  | 0.7182    | 0.8760   |
-| Bước 3 (thêm `train_batch2`) | \_\_\_    | \_\_\_   |
+| Bước 3 (thêm `train_batch2`) | 0.7297    | 0.8800   |
 
 
-**Nhận xét:** \_\_\_
+**Nhận xét:** F1 tăng nhẹ (0.7182→0.7297) nhưng chênh nhỏ, trong khoảng dao động do holdout 500 mẫu (~124 mẫu dương), nên chưa kết luận dữ liệu mới cải thiện mô hình. Hai nửa chia ngẫu nhiên từ cùng nguồn nên cùng phân phối; mô hình siêu tham số cố định đã học gần hết từ 22.361 mẫu đầu. Giá trị thật của Bước 3 là pipeline tự động chạy đúng từ commit dữ liệu đến API phục vụ mô hình mới.
 
-<!--
-Một câu trả lời trung thực kiểu "f1 giảm 0,01 vì dữ liệu mới cùng phân phối, không mang
-thêm thông tin mới" được đánh giá cao hơn kết luận sai rằng thêm dữ liệu luôn tốt hơn.
--->
-
----
-
-## 5. Phần Bonus Đã Thực Hiện (nếu có)
-
-<!-- Xóa cả mục 5 nếu không làm bonus. Mỗi bonus tối đa 1 dòng. -->
-
-- [ ] Bonus 1 - Tracking MLflow từ xa với DagsHub: \_\_\_
-- [ ] Bonus 2 - Điều chỉnh ngưỡng quyết định: \_\_\_
-- [ ] Bonus 3 - Báo cáo precision / recall tự động: \_\_\_
-- [ ] Bonus 4 - Hoàn trả về phiên bản trước: \_\_\_
-- [ ] Bonus 5 - Cảnh báo lệch lạc dữ liệu: \_\_\_
