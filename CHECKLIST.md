@@ -112,7 +112,7 @@ Sau khi hoàn thành lab và chụp đủ ảnh, xóa các tài nguyên AWS đ�
 - [x] Terminate EC2 instance (`income-api`) | ✓ Instance i-097b6a709a25cfd47 terminated (8/10/2026)
 - [x] Xóa security group (`income-api-sg`) | ✓ Deleted (8/10/2026)
 - [x] Xóa EC2 key pair (`income-lab-key.pem`) | ✓ Deleted (8/10/2026)
-- [ ] Xóa IAM role và instance profile (`income-api-role`, `income-api-profile`) | Instance profile deleted, role còn lại: chạy `aws iam delete-role-policy --role-name income-api-role --policy-name read-artifacts` rồi `aws iam delete-role --role-name income-api-role`
+- [x] Xóa IAM role và instance profile (`income-api-role`, `income-api-profile`) | Instance profile deleted, role còn lại: chạy `aws iam delete-role-policy --role-name income-api-role --policy-name read-artifacts` rồi `aws iam delete-role --role-name income-api-role` ✓ role đã xoá (xác minh: get-role → NoSuchEntity, 8/10/2026)
 - [x] Xóa S3 bucket (`income-lab-*`) - **KHÔNG THỂ KHÔI PHỤC** | ✓ Deleted (8/10/2026)
 - [x] Xóa IAM user (`income-lab-user`) - access keys, inline policies | ✓ Deleted (8/10/2026)
 - [x] Xóa local SSH keys (`~/.ssh/income-lab-key.pem`, `~/.ssh/income_deploy*`) | ✓ Deleted (8/10/2026)
