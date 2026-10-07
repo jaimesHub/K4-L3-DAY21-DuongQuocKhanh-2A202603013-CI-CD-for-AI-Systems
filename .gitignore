@@ -12,4 +12,4 @@ sa-key.json
 __pycache__/
 *.pyc
 .DS_Store
-reports/
+reports/s3-policy.json*
