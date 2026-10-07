@@ -101,8 +101,8 @@
 
 - [x] **Điền báo cáo vào `nop-bai/bao-cao.md`** | 4 mục bắt buộc điền xong, xoá toàn bộ comment | Số từ cuối: 611 ✓ | 0 điểm
 - [x] **Nộp 5 ảnh chụp màn hình** | 01, 02, 03, 04, 05a, 05b (ảnh 05 tách thành 2 file) | < 1 MB mỗi ảnh ✓ | 0 điểm
-- [ ] **Commit tất cả lên GitHub** | Chạy: `git add nop-bai/ && git commit && git push` | Thư mục `nop-bai/` hiển thị đầy đủ trên GitHub | 0 điểm
-- [ ] **Repo GitHub ở chế độ public** | Kiểm tra: Settings > Visibility > Public | Có thể truy cập repo mà không cần login | 0 điểm
+- [x] **Commit tất cả lên GitHub** | Chạy: `git add nop-bai/ && git commit && git push` | Thư mục `nop-bai/` hiển thị đầy đủ trên GitHub | 0 điểm ✓ commit ab301ef đã push lên origin/main
+- [x] **Repo GitHub ở chế độ public** | Kiểm tra: Settings > Visibility > Public | Có thể truy cập repo mà không cần login | 0 điểm ✓ gh repo view: PUBLIC
 - [ ] **Dán URL repo vào bài nộp trên vlearn.dev** | URL: `https://github.com/USERNAME/REPO_NAME` | Được xác nhận nhân viên chấm | 0 điểm
 
 ---
